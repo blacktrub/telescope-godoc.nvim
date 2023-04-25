@@ -1,4 +1,4 @@
-local packages = require("packages")
+local packages = require("godoc.packages")
 
 local function show_doc_page(ctx)
 	local buf = vim.api.nvim_create_buf(false, true)
@@ -6,7 +6,7 @@ local function show_doc_page(ctx)
 		stdout_buffered = true,
 		on_stdout = function(_, data)
 			if data then
-			  print(data, buf)
+				print(data, buf)
 				vim.api.nvim_buf_set_lines(buf, 0, -1, false, data)
 			end
 		end,

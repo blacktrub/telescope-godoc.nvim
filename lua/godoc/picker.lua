@@ -1,4 +1,3 @@
-local packages = require("packages")
 local pickers = require("telescope.pickers")
 local finders = require("telescope.finders")
 local conf = require("telescope.config").values
@@ -38,4 +37,6 @@ local colors = function(opts)
 		:find()
 end
 
-colors(require("telescope.themes").get_dropdown({}))
+return {
+	picker = colors,
+}
