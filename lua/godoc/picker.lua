@@ -3,32 +3,60 @@ local finders = require("telescope.finders")
 local conf = require("telescope.config").values
 local actions = require("telescope.actions")
 local action_state = require("telescope.actions.state")
+local previewers = require("telescope.previewers")
+local previewer_utils = require("telescope.previewers.utils")
+-- TODO: do smth if doesn't have
+local has_plenary, Job = pcall(require, "plenary.job")
 
-local colors = function(opts)
+local go_document_preview = function(entry, buf)
+	Job:new({
+		command = "go",
+		args = { "doc", entry.value },
+		on_exit = function(job, exit_code)
+			vim.schedule(function()
+				if exit_code ~= 0 then
+					vim.notify("failed to preview go document", vim.log.levels.ERROR)
+					return
+				end
+				local result = job:result()
+				if result then
+					vim.api.nvim_buf_set_lines(buf, 0, -1, true, result)
+					previewer_utils.highlighter(buf, "go")
+					vim.api.nvim_buf_call(buf, function()
+						local win = vim.fn.win_findbuf(buf)[1]
+						vim.wo[win].conceallevel = 2
+						vim.wo[win].wrap = true
+						vim.wo[win].linebreak = true
+						vim.bo[buf].textwidth = 80
+					end)
+				end
+			end)
+		end,
+	}):start()
+end
+
+local picker_factory = function(opts)
 	opts = opts or {}
 	pickers
 		.new(opts, {
 			prompt_title = "colors",
 			finder = finders.new_table({
-				results = {
-					{ "red", "#ff0000" },
-					{ "green", "#00ff00" },
-					{ "blue", "#0000ff" },
-				},
+				results = require("godoc.packages"),
 				entry_maker = function(entry)
 					return {
 						value = entry,
-						display = entry[1],
-						ordinal = entry[1],
+						display = entry,
+						ordinal = entry,
+						preview_command = go_document_preview,
 					}
 				end,
 			}),
 			sorter = conf.generic_sorter(opts),
+			previewer = previewers.display_content.new(opts),
 			attach_mappings = function(prompt_bufnr, map)
 				actions.select_default:replace(function()
 					actions.close(prompt_bufnr)
 					local selection = action_state.get_selected_entry()
-					-- print(vim.inspecredt(selection))
 					vim.api.nvim_put({ selection[1] }, "", false, true)
 				end)
 				return true
@@ -38,5 +66,5 @@ local colors = function(opts)
 end
 
 return {
-	picker = colors,
+	picker = picker_factory,
 }
