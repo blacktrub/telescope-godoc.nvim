@@ -64,6 +64,7 @@ local picker_factory = function(opts)
 					local buf = vim.api.nvim_create_buf(false, true)
 					show_preview(entry, buf, function()
 						vim.api.nvim_buf_set_option(buf, "modifiable", false)
+						vim.api.nvim_buf_set_option(buf, "filetype", "go")
 
 						local ui = vim.api.nvim_list_uis()[1]
 						local width = math.floor(ui.width / 2)
