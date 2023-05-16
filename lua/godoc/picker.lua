@@ -8,7 +8,7 @@ local previewer_utils = require("telescope.previewers.utils")
 -- TODO: do smth if doesn't have
 local has_plenary, Job = pcall(require, "plenary.job")
 
-local go_document_preview = function(entry, buf)
+local show_preview = function(entry, buf, callback)
 	Job:new({
 		command = "go",
 		args = { "doc", entry.value },
@@ -30,6 +30,10 @@ local go_document_preview = function(entry, buf)
 						vim.bo[buf].textwidth = 80
 					end)
 				end
+
+				if callback then
+					callback()
+				end
 			end)
 		end,
 	}):start()
@@ -39,7 +43,7 @@ local picker_factory = function(opts)
 	opts = opts or {}
 	pickers
 		.new(opts, {
-			prompt_title = "colors",
+			prompt_title = "Golang Documentation",
 			finder = finders.new_table({
 				results = require("godoc.packages"),
 				entry_maker = function(entry)
@@ -47,7 +51,7 @@ local picker_factory = function(opts)
 						value = entry,
 						display = entry,
 						ordinal = entry,
-						preview_command = go_document_preview,
+						preview_command = show_preview,
 					}
 				end,
 			}),
@@ -56,8 +60,28 @@ local picker_factory = function(opts)
 			attach_mappings = function(prompt_bufnr, map)
 				actions.select_default:replace(function()
 					actions.close(prompt_bufnr)
-					local selection = action_state.get_selected_entry()
-					vim.api.nvim_put({ selection[1] }, "", false, true)
+					local entry = action_state.get_selected_entry()
+					local buf = vim.api.nvim_create_buf(false, true)
+					show_preview(entry, buf, function()
+						vim.api.nvim_buf_set_option(buf, "modifiable", false)
+
+						local ui = vim.api.nvim_list_uis()[1]
+						local width = math.floor(ui.width / 2)
+						local height = 50
+						-- TODO: how to calculate it properly
+						if height > ui.height then
+							height = ui.height - 5
+						end
+						vim.api.nvim_open_win(buf, true, {
+							relative = "editor",
+							style = "minimal",
+							width = width,
+							height = height,
+							col = (ui.width / 2) - (width / 2),
+							row = (ui.height / 2) - (height / 2),
+							border = "rounded",
+						})
+					end)
 				end)
 				return true
 			end,
